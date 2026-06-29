@@ -4,8 +4,9 @@ services:
     image: mcl-template-builder:latest
     container_name: mcl-template-builder
     ports:
-      # host:container — app is reachable at http://<host>:24601
-      - "24601:8000"
+      # Bound to loopback only — reachable at http://localhost:24601 on the host,
+      # not exposed to the network. Front with a reverse proxy to publish it.
+      - "127.0.0.1:24601:8000"
     volumes:
       # Named volume → schedule survives container rebuilds/upgrades.
       # Swap for a host path (e.g. ./data:/data) if you'd rather see the .db file.

@@ -1,0 +1,22 @@
+# VCS / tooling
+.git
+.gitignore
+.claude/
+.DS_Store
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Runtime data — lives in the Docker volume, not the image
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Not needed in the image (build only copies server.py, requirements.txt, static/)
+README.md
+DATA_FORMAT.md
+*.xlsx
+mcltemplatebuilder.html
+mcltemplatebuilder_v2.html

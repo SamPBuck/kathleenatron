@@ -4,14 +4,14 @@ Packages the v2 scheduler app together with a tiny Flask + SQLite backend so the
 schedule is stored **server-side** and shared by everyone who opens the page —
 instead of living in each visitor's browser.
 
-- **Auth:** none. One shared schedule, intended for a trusted network. If it
-  needs locking down, put it behind a reverse proxy / VPN that handles auth.
+- **Auth:** none. One shared schedule. The port is **bound to localhost only**
+  (`127.0.0.1:24601`), so it isn't exposed on the network — front it with a
+  reverse proxy / VPN to publish it.
 - **Storage:** a single JSON blob in SQLite at `/data/schedule.db`.
 
 ## Run it
 
 ```bash
-cd deploy
 docker compose up --build -d
 ```
 
@@ -22,8 +22,8 @@ in which case it behaves like the standalone file and uses browser storage).
 Plain Docker (no compose):
 
 ```bash
-docker build -t mcl-template-builder deploy
-docker run -d -p 24601:8000 -v mcl-data:/data --name mcl mcl-template-builder
+docker build -t mcl-template-builder .
+docker run -d -p 127.0.0.1:24601:8000 -v mcl-data:/data --name mcl mcl-template-builder
 ```
 
 ## How persistence works
@@ -45,7 +45,7 @@ mount in `docker-compose.yml` to `- ./data:/data`.
 Two easy paths:
 
 1. **In-app:** the **Save JSON** button still works and downloads the full blob
-   (format documented in `../DATA_FORMAT.md`).
+   (format documented in `DATA_FORMAT.md`).
 2. **DB file:** copy it out of the volume, e.g.
    ```bash
    docker cp mcl-template-builder:/data/schedule.db ./schedule-backup.db
@@ -69,4 +69,4 @@ Two easy paths:
   and always writes to localStorage first, so an offline blip never loses edits.
 - Schema is pinned to the v2 format; incoming data is run through the app's
   `migrate()` on load. Don't point an older (15-min `index.html`) client at this
-  backend — see the slot-size caveat in `../DATA_FORMAT.md`.
+  backend — see the slot-size caveat in `DATA_FORMAT.md`.
