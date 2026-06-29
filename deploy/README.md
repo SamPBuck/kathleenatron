@@ -15,7 +15,7 @@ cd deploy
 docker compose up --build -d
 ```
 
-Open <http://localhost:8000>. The badge next to the title shows **Synced** when
+Open <http://localhost:24601>. The badge next to the title shows **Synced** when
 the server is the source of truth (or **Local only** if the API can't be reached,
 in which case it behaves like the standalone file and uses browser storage).
 
@@ -23,7 +23,7 @@ Plain Docker (no compose):
 
 ```bash
 docker build -t mcl-template-builder deploy
-docker run -d -p 8000:8000 -v mcl-data:/data --name mcl mcl-template-builder
+docker run -d -p 24601:8000 -v mcl-data:/data --name mcl mcl-template-builder
 ```
 
 ## How persistence works
