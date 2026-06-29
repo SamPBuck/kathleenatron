@@ -4,6 +4,11 @@
 # Schedule template spreadsheets — keep out of the repo
 *.xlsx
 
+# Standalone HTML prototypes — superseded by deploy/static/index.html (the served app)
+/index.html
+/mcltemplatebuilder.html
+/mcltemplatebuilder_v2.html
+
 # Python
 __pycache__/
 *.pyc
