@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MCL Template Builder</title>
+<style>
+  :root {
+    --slot-h: 18px;
+    --day-min-w: 150px;
+    --border: #d0d4dc;
+    --border-strong: #9aa0ab;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --text: #1f2430;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --accent-soft: #dbeafe;
+    --danger: #dc2626;
+    --hour-line: #c7cdd6;
+    --quarter-line: #e7eaf0;
+    --selected: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--text); background: var(--bg); font-size: 13px; }
+  button { font: inherit; cursor: pointer; border: 1px solid var(--border-strong); background: var(--panel); padding: 5px 10px; border-radius: 4px; }
+  button:hover { background: #eef1f5; }
+  button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+  button.primary:hover { background: #1d4ed8; }
+  button.danger { background: var(--danger); color: white; border-color: var(--danger); }
+  input, select, textarea { font: inherit; padding: 5px 7px; border: 1px solid var(--border-strong); border-radius: 4px; background: white; color: var(--text); }
+
+  #app { display: flex; flex-direction: column; height: 100vh; }
+  #toolbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  #toolbar .title { font-weight: 600; font-size: 15px; margin-right: 4px; }
+  #toolbar .spacer { flex: 1; }
+  #toolbar label { color: var(--muted); font-size: 12px; }
+
+  #tabs { display: flex; gap: 2px; padding: 6px 12px; background: var(--panel); border-bottom: 1px solid var(--border); align-items: center; }
+  .tab { padding: 6px 14px; border: 1px solid var(--border-strong); border-radius: 4px 4px 0 0; background: #eef1f5; cursor: pointer; font-weight: 500; }
+  .tab.active { background: var(--panel); border-bottom-color: var(--panel); color: var(--accent); }
+  #week-actions { margin-left: auto; display: flex; gap: 6px; }
+
+  #main { display: flex; flex: 1; min-height: 0; }
+
+  /* Palette */
+  #palette { width: 260px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+  #palette-header { padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  #palette-header h3 { margin: 0; font-size: 13px; flex: 1; }
+  #palette-search { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  #palette-search input { width: 100%; }
+  #palette-list { flex: 1; overflow-y: auto; padding: 8px; }
+  .researcher-card { padding: 7px 9px; margin-bottom: 5px; background: white; border: 1px solid var(--border); border-left: 4px solid #888; border-radius: 4px; cursor: grab; user-select: none; }
+  .researcher-card:hover { background: #f8fafc; border-color: var(--border-strong); }
+  .researcher-card.dragging { opacity: 0.4; }
+  .rc-name { font-weight: 500; }
+  .rc-meta { color: var(--muted); font-size: 11px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rc-actions { display: none; gap: 4px; margin-top: 5px; }
+  .researcher-card:hover .rc-actions { display: flex; }
+  .rc-actions button { padding: 2px 6px; font-size: 11px; }
+
+  /* Schedule */
+  #schedule-wrap { flex: 1; overflow: auto; background: var(--bg); }
+  #schedule { display: grid; grid-template-columns: 60px repeat(7, minmax(var(--day-min-w), 1fr)); min-width: max-content; background: var(--panel); }
+  .col-header { position: sticky; top: 0; z-index: 5; background: var(--panel); border-bottom: 2px solid var(--border-strong); border-right: 1px solid var(--border); padding: 8px 10px; text-align: center; font-weight: 600; }
+  .time-col-header { border-right: 1px solid var(--border-strong); }
+  .time-col { border-right: 1px solid var(--border-strong); position: relative; }
+  .time-label { height: var(--slot-h); padding-right: 6px; text-align: right; color: var(--muted); font-size: 11px; line-height: var(--slot-h); border-top: 1px solid transparent; }
+  .time-label.hour { color: var(--text); font-weight: 500; border-top: 1px solid var(--hour-line); }
+  .time-label.sub { border-top: 1px dotted var(--quarter-line); font-size: 10px; }
+  .day-col { position: relative; border-right: 1px solid var(--border); }
+  .slot { height: var(--slot-h); border-top: 1px solid transparent; }
+  .slot.hour { border-top: 1px solid var(--hour-line); }
+  .slot.sub { border-top: 1px dotted var(--quarter-line); }
+  .slot.drop-target { background: var(--accent-soft); }
+
+  .block { position: absolute; left: 2px; right: 2px; background: var(--block-color, #94a3b8); color: white; border-radius: 3px; padding: 3px 5px; font-size: 11px; line-height: 1.25; overflow: hidden; cursor: grab; user-select: none; box-shadow: 0 1px 2px rgba(0,0,0,0.1); border: 1.5px solid transparent; }
+  .block.selected { border-color: var(--selected); box-shadow: 0 0 0 2px var(--selected), 0 1px 3px rgba(0,0,0,0.2); z-index: 3; }
+  .block.dragging { opacity: 0.5; }
+  .block .b-label { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .block .b-meta { font-size: 10px; opacity: 0.9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .block .b-resize { position: absolute; left: 0; right: 0; height: 8px; cursor: row-resize; }
+  .block .b-resize.top { top: 0; }
+  .block .b-resize.bottom { bottom: 0; }
+  .block.dragging-move { cursor: grabbing; }
+  body.cursor-resize, body.cursor-resize * { cursor: row-resize !important; }
+  body.cursor-grabbing, body.cursor-grabbing * { cursor: grabbing !important; }
+
+  #ghost { position: fixed; pointer-events: none; z-index: 1000; padding: 4px 8px; background: var(--accent); color: white; border-radius: 4px; font-size: 11px; box-shadow: 0 2px 6px rgba(0,0,0,0.25); opacity: 0.9; }
+  .block-preview { position: absolute; left: 2px; right: 2px; background: rgba(37,99,235,0.25); border: 2px dashed var(--accent); border-radius: 3px; pointer-events: none; }
+
+  /* Modal */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,0.45); display: flex; align-items: center; justify-content: center; z-index: 100; }
+  .modal { background: white; border-radius: 8px; padding: 20px; min-width: 360px; max-width: 90vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+  .modal h2 { margin: 0 0 14px 0; font-size: 16px; }
+  .modal .field { margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .modal .field label { font-size: 12px; color: var(--muted); }
+  .modal .field input, .modal .field select, .modal .field textarea { width: 100%; }
+  .modal .row { display: flex; gap: 10px; }
+  .modal .row > * { flex: 1; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+  .color-picker { display: grid; grid-template-columns: repeat(10, 28px); gap: 6px; }
+  .color-swatch { width: 28px; height: 28px; border-radius: 5px; cursor: pointer; border: 2px solid transparent; position: relative; transition: transform 0.1s ease; }
+  .color-swatch:hover { transform: scale(1.12); }
+  .color-swatch.selected { border-color: var(--text); box-shadow: 0 0 0 2px white inset; }
+  .color-swatch.selected::after { content: "✓"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.45); }
+
+  .empty-hint { color: var(--muted); padding: 18px 12px; font-size: 12px; text-align: center; }
+
+  kbd { background: #f1f5f9; border: 1px solid var(--border-strong); border-radius: 3px; padding: 0 4px; font-size: 11px; font-family: inherit; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="toolbar">
+    <div class="title">MCL Template Builder</div>
+    <label>Scanner:</label>
+    <select id="scanner-select"></select>
+    <button id="btn-settings" title="Settings">⚙</button>
+    <div class="spacer"></div>
+    <button id="btn-save-json">Save JSON</button>
+    <button id="btn-load-json">Load JSON</button>
+    <button id="btn-export-ics">Export ICS</button>
+    <input id="file-input" type="file" accept=".json" hidden>
+  </div>
+
+  <div id="tabs">
+    <div class="tab" data-week="1">Week 1</div>
+    <div class="tab" data-week="2">Week 2</div>
+    <div class="tab" data-week="3">Week 3</div>
+    <div class="tab" data-week="4">Week 4</div>
+    <div id="week-actions">
+      <button id="btn-copy-week">Copy this week →</button>
+      <button id="btn-clear-week">Clear week</button>
+    </div>
+  </div>
+
+  <div id="main">
+    <aside id="palette">
+      <div id="palette-header">
+        <h3>Studies</h3>
+        <button id="btn-add-researcher" class="primary">+ Add</button>
+      </div>
+      <div id="palette-search"><input id="search-input" placeholder="Filter…"></div>
+      <div id="palette-list"></div>
+    </aside>
+    <main id="schedule-wrap">
+      <div id="schedule"></div>
+    </main>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+<div id="ghost" hidden></div>
+
+<script>
+/* ===== Constants ===== */
+const DAY_NAMES = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const DEFAULT_SLOT_MIN = 20;
+const SCANNER_SLOT_DEFAULTS = { "Varian 4T": 15 };
+const SLOT_CHOICES = [10, 15, 20, 30];
+const PALETTE_COLORS = [
+  // Reds → oranges → yellows
+  "#dc2626","#b91c1c","#ea580c","#c2410c","#d97706","#a16207",
+  // Greens → teals
+  "#65a30d","#15803d","#059669","#0f766e","#0891b2",
+  // Blues → indigos
+  "#0284c7","#0369a1","#2563eb","#4338ca",
+  // Purples → pinks
+  "#7c3aed","#6d28d9","#9333ea","#db2777","#be185d",
+];
+const STORAGE_KEY = "mcl-template-builder-v1";
+
+const SAMPLE_STUDIES = [
+  ["Aging & Memory",        "Aging",        "Anderson",   60],
+  ["Cognitive Reserve",     "CogRes",       "Anderson",   40],
+  ["BOLD-Motor",            "BOLD-M",       "Barton",     40],
+  ["AUDIO-1",               "AUDIO-1",      "Caldwell",   60],
+  ["AUDIO-2",               "AUDIO-2",      "Caldwell",   40],
+  ["Tinnitus Scan",         "Tinnitus",     "Caldwell",   80],
+  ["Depression MRS",        "DepMRS",       "Davidson",   80],
+  ["Mood Reactivity",       "MoodRx",       "Davidson",   60],
+  ["Early Psychosis",       "EPsych",       "Ellis",      80],
+  ["DTI Protocol",          "DTI",          "Fischer",    40],
+  ["Connectome",            "Connect",      "Fischer",    80],
+  ["Adolescent Study",      "Adol",         "Greene",     60],
+  ["Pain Response",         "PainRx",       "Harrison",   60],
+  ["Opioid Tolerance",      "OpTol",        "Harrison",   80],
+  ["Sleep Architecture",    "SleepArch",    "Kim",       120],
+  ["Nightcap",              "Nightcap",     "Kim",        80],
+  ["Meditation fMRI",       "MedFMRI",      "Patel",      60],
+  ["Yoga Brain",            "YogaBrain",    "Patel",      40],
+  ["Reward Circuits",       "Reward",       "Quinn",      60],
+  ["Language Network",      "LangNet",      "Thornton",   40],
+];
+
+/* ===== State ===== */
+const defaultData = () => ({
+  settings: {
+    dayStartHour: 7,
+    dayEndHour: 21,
+    scannerNames: ["Prisma P1","Prisma P2","Varian 4T"],
+    scannerSlotMin: { "Prisma P1": 20, "Prisma P2": 20, "Varian 4T": 15 },
+    cycleStartDate: new Date().toISOString().slice(0,10),
+  },
+  researchers: [],
+  schedules: {
+    "Prisma P1": {1:[],2:[],3:[],4:[]},
+    "Prisma P2": {1:[],2:[],3:[],4:[]},
+    "Varian 4T": {1:[],2:[],3:[],4:[]},
+  },
+});
+
+let data = loadData();
+const ui = {
+  currentScanner: data.settings.scannerNames[0],
+  currentWeek: 1,
+  selectedBlockId: null,
+  filter: "",
+};
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaultData();
+    const parsed = JSON.parse(raw);
+    return migrate(parsed);
+  } catch (e) {
+    console.warn("Failed to load; starting fresh:", e);
+    return defaultData();
+  }
+}
+function migrate(d) {
+  const base = defaultData();
+  d.settings = Object.assign({}, base.settings, d.settings || {});
+  d.researchers = d.researchers || [];
+  d.schedules = d.schedules || {};
+  // Rename legacy "Scanner 1/2/3" to new defaults
+  const legacyMap = { "Scanner 1": "Prisma P1", "Scanner 2": "Prisma P2", "Scanner 3": "Varian 4T" };
+  const namesAreLegacy = d.settings.scannerNames.every((n, i) => n === Object.keys(legacyMap)[i]);
+  if (namesAreLegacy) {
+    const newSchedules = {};
+    d.settings.scannerNames.forEach(oldName => {
+      newSchedules[legacyMap[oldName]] = d.schedules[oldName] || {1:[],2:[],3:[],4:[]};
+    });
+    d.schedules = newSchedules;
+    d.settings.scannerNames = Object.values(legacyMap);
+  }
+  d.settings.scannerSlotMin = d.settings.scannerSlotMin || {};
+  for (const name of d.settings.scannerNames) {
+    if (!d.schedules[name]) d.schedules[name] = {1:[],2:[],3:[],4:[]};
+    for (const w of [1,2,3,4]) if (!d.schedules[name][w]) d.schedules[name][w] = [];
+    if (d.settings.scannerSlotMin[name] == null) {
+      d.settings.scannerSlotMin[name] = SCANNER_SLOT_DEFAULTS[name] ?? DEFAULT_SLOT_MIN;
+    }
+  }
+  if (!d.settings.sampleDataLoaded) {
+    const samples = SAMPLE_STUDIES.map(([name, short, pi, duration], i) => ({
+      id: uid(), name, short, pi, duration,
+      color: PALETTE_COLORS[i % PALETTE_COLORS.length],
+      notes: "",
+    }));
+    d.researchers = d.researchers.concat(samples);
+    d.settings.sampleDataLoaded = true;
+  }
+  return d;
+}
+function saveData() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+  catch (e) { console.error("Save failed:", e); }
+}
+
+/* ===== Utility ===== */
+function uid() { return Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); }
+function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function slotMinFor(scanner) {
+  return data.settings.scannerSlotMin?.[scanner] ?? SCANNER_SLOT_DEFAULTS[scanner] ?? DEFAULT_SLOT_MIN;
+}
+function currentSlotMin() { return slotMinFor(ui.currentScanner); }
+function totalSlots() { return (data.settings.dayEndHour - data.settings.dayStartHour) * (60 / currentSlotMin()); }
+function minutesToLabel(mins) {
+  const h = Math.floor(mins / 60), m = mins % 60;
+  const ampm = h >= 12 ? "p" : "a";
+  const hh = ((h % 12) || 12);
+  return m === 0 ? `${hh}${ampm}` : `${hh}:${String(m).padStart(2,"0")}${ampm}`;
+}
+function slotToMinutes(slot) { return data.settings.dayStartHour * 60 + slot * currentSlotMin(); }
+function currentBlocks() { return data.schedules[ui.currentScanner][ui.currentWeek]; }
+function getResearcher(id) { return data.researchers.find(r => r.id === id); }
+function cycleMinutesByResearcher() {
+  const out = {};
+  for (const [name, scan] of Object.entries(data.schedules)) {
+    const sm = slotMinFor(name);
+    for (const week of Object.values(scan))
+      for (const b of week)
+        out[b.researcherId] = (out[b.researcherId] || 0) + b.durationSlots * sm;
+  }
+  return out;
+}
+
+/* ===== Render ===== */
+function render() {
+  renderScannerSelect();
+  renderTabs();
+  renderPalette();
+  renderSchedule();
+}
+
+function renderScannerSelect() {
+  const sel = document.querySelector("#scanner-select");
+  sel.innerHTML = "";
+  for (const name of data.settings.scannerNames) {
+    const opt = document.createElement("option");
+    opt.value = name; opt.textContent = name;
+    if (name === ui.currentScanner) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+function renderTabs() {
+  document.querySelectorAll("#tabs .tab").forEach(el => {
+    el.classList.toggle("active", Number(el.dataset.week) === ui.currentWeek);
+  });
+}
+
+function renderPalette() {
+  const list = document.querySelector("#palette-list");
+  list.innerHTML = "";
+  const filter = ui.filter.toLowerCase();
+  const filtered = data.researchers.filter(r =>
+    !filter || (r.name + " " + (r.short||"") + " " + (r.pi||"")).toLowerCase().includes(filter)
+  );
+  if (filtered.length === 0) {
+    const hint = document.createElement("div");
+    hint.className = "empty-hint";
+    hint.textContent = data.researchers.length === 0
+      ? "No researchers yet. Click + Add."
+      : "No matches.";
+    list.appendChild(hint);
+    return;
+  }
+  const totals = cycleMinutesByResearcher();
+  for (const r of filtered) {
+    const el = document.createElement("div");
+    el.className = "researcher-card";
+    el.style.borderLeftColor = r.color;
+    el.dataset.id = r.id;
+    const total = totals[r.id] || 0;
+    const totalLabel = total === 0 ? "unscheduled" : `${total} min / cycle`;
+    const metaParts = [totalLabel];
+    if (r.pi) metaParts.push(escapeHtml(r.pi));
+    if (r.short && r.short !== r.name) metaParts.push(escapeHtml(r.name));
+    el.innerHTML = `
+      <div class="rc-name">${escapeHtml(r.short || r.name)}</div>
+      <div class="rc-meta">${metaParts.join(" · ")}</div>
+      <div class="rc-actions">
+        <button data-act="edit">Edit</button>
+        <button data-act="delete">Delete</button>
+      </div>`;
+    el.addEventListener("mousedown", e => {
+      if (e.target.tagName === "BUTTON") return;
+      startDragFromPalette(e, r);
+    });
+    el.querySelector('[data-act="edit"]').addEventListener("click", e => { e.stopPropagation(); openResearcherModal(r); });
+    el.querySelector('[data-act="delete"]').addEventListener("click", e => { e.stopPropagation(); deleteResearcher(r); });
+    list.appendChild(el);
+  }
+}
+
+function renderSchedule() {
+  const grid = document.querySelector("#schedule");
+  grid.innerHTML = "";
+  const slots = totalSlots();
+
+  // Headers
+  grid.appendChild(elHeader("time-col-header", ""));
+  for (const d of DAY_NAMES) grid.appendChild(elHeader("col-header", d));
+
+  // Time column
+  const timeCol = document.createElement("div");
+  timeCol.className = "time-col";
+  for (let s = 0; s < slots; s++) {
+    const lbl = document.createElement("div");
+    const mins = slotToMinutes(s);
+    const isHour = mins % 60 === 0;
+    lbl.className = "time-label" + (isHour ? " hour" : " sub");
+    lbl.textContent = minutesToLabel(mins);
+    timeCol.appendChild(lbl);
+  }
+  grid.appendChild(timeCol);
+
+  // Day columns
+  for (let d = 0; d < 7; d++) {
+    const col = document.createElement("div");
+    col.className = "day-col";
+    col.dataset.day = d;
+    col.style.height = (slots * 18) + "px";
+    for (let s = 0; s < slots; s++) {
+      const cell = document.createElement("div");
+      const mins = slotToMinutes(s);
+      const isHour = mins % 60 === 0;
+      cell.className = "slot" + (isHour ? " hour" : " sub");
+      cell.dataset.slot = s;
+      cell.dataset.day = d;
+      col.appendChild(cell);
+    }
+    col.addEventListener("mousedown", e => {
+      if (e.target.closest(".block")) return;
+      if (!e.target.classList.contains("slot")) return;
+      startCreateBlankBlock(e, d, col);
+    });
+    grid.appendChild(col);
+  }
+
+  // Blocks for current view
+  for (const b of currentBlocks()) renderBlock(b);
+}
+
+function elHeader(cls, text) {
+  const el = document.createElement("div");
+  el.className = cls;
+  el.textContent = text;
+  return el;
+}
+
+function renderBlock(block) {
+  const col = document.querySelector(`.day-col[data-day="${block.day}"]`);
+  if (!col) return;
+  const r = getResearcher(block.researcherId);
+  const color = r?.color || "#94a3b8";
+  const label = block.label || r?.short || r?.name || "(untitled)";
+  const el = document.createElement("div");
+  el.className = "block" + (block.id === ui.selectedBlockId ? " selected" : "");
+  el.style.top = (block.startSlot * 18) + "px";
+  el.style.height = (block.durationSlots * 18 - 1) + "px";
+  el.style.setProperty("--block-color", color);
+  el.dataset.id = block.id;
+  const start = minutesToLabel(slotToMinutes(block.startSlot));
+  const end = minutesToLabel(slotToMinutes(block.startSlot + block.durationSlots));
+  const durMin = block.durationSlots * currentSlotMin();
+  el.innerHTML = `
+    <div class="b-label">${escapeHtml(label)}</div>
+    <div class="b-meta">${start}–${end} · ${durMin}m</div>
+    <div class="b-resize top" data-resize="top"></div>
+    <div class="b-resize bottom" data-resize="bottom"></div>`;
+  el.addEventListener("mousedown", e => {
+    const edge = e.target.dataset.resize;
+    if (edge) startResizeBlock(e, block, edge);
+    else startMoveBlock(e, block);
+  });
+  el.addEventListener("dblclick", () => openBlockModal(block));
+  col.appendChild(el);
+}
+
+/* ===== Drag from palette ===== */
+let dragCtx = null;
+
+function startDragFromPalette(e, researcher) {
+  e.preventDefault();
+  dragCtx = { type: "create", researcher, startX: e.clientX, startY: e.clientY, moved: false };
+  showGhost(researcher.short || researcher.name, e.clientX, e.clientY);
+  document.body.classList.add("cursor-grabbing");
+  document.addEventListener("mousemove", onDragMove);
+  document.addEventListener("mouseup", onDragEnd);
+}
+
+function showGhost(text, x, y) {
+  const g = document.querySelector("#ghost");
+  g.hidden = false;
+  g.textContent = text;
+  g.style.left = (x + 10) + "px";
+  g.style.top = (y + 10) + "px";
+}
+function hideGhost() { document.querySelector("#ghost").hidden = true; }
+
+function onDragMove(e) {
+  if (!dragCtx) return;
+  if (Math.abs(e.clientX - dragCtx.startX) > 3 || Math.abs(e.clientY - dragCtx.startY) > 3) dragCtx.moved = true;
+  if (!dragCtx.moved) return;
+  if (dragCtx.type === "create" || dragCtx.type === "move") {
+    showGhost(dragCtx.label || dragCtx.researcher?.short || dragCtx.researcher?.name || "", e.clientX, e.clientY);
+    highlightDropTarget(e);
+  } else if (dragCtx.type === "resize") {
+    doResize(e);
+  }
+}
+
+function onDragEnd(e) {
+  document.removeEventListener("mousemove", onDragMove);
+  document.removeEventListener("mouseup", onDragEnd);
+  document.body.classList.remove("cursor-grabbing", "cursor-resize");
+  hideGhost();
+  clearDropHighlight();
+  if (!dragCtx) return;
+  try {
+    if (dragCtx.type === "create" && dragCtx.moved) {
+      const target = getDropTarget(e);
+      if (target) {
+        const r = dragCtx.researcher;
+        const dur = Math.max(1, Math.round((r.duration || 60) / currentSlotMin()));
+        const max = totalSlots() - target.slot;
+        const block = {
+          id: uid(),
+          researcherId: r.id,
+          day: target.day,
+          startSlot: target.slot,
+          durationSlots: Math.min(dur, max),
+          label: "",
+          notes: "",
+        };
+        currentBlocks().push(block);
+        ui.selectedBlockId = block.id;
+        saveData();
+        renderSchedule();
+      }
+    } else if (dragCtx.type === "move" && dragCtx.moved) {
+      const target = getDropTarget(e, dragCtx.grabSlotOffset);
+      if (target) {
+        const b = dragCtx.block;
+        b.day = target.day;
+        b.startSlot = Math.max(0, Math.min(totalSlots() - b.durationSlots, target.slot));
+        saveData();
+        renderSchedule();
+      }
+    }
+  } finally {
+    dragCtx = null;
+  }
+}
+
+function getDropTarget(e, grabSlotOffset = 0) {
+  let col = null;
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  if (el) col = el.closest(".day-col");
+  if (!col) {
+    // fall back: find nearest day column by X coordinate
+    const cols = document.querySelectorAll(".day-col");
+    for (const c of cols) {
+      const r = c.getBoundingClientRect();
+      if (e.clientX >= r.left && e.clientX <= r.right) { col = c; break; }
+    }
+  }
+  if (!col) return null;
+  const rect = col.getBoundingClientRect();
+  const y = e.clientY - rect.top;
+  const slot = Math.max(0, Math.min(totalSlots() - 1, Math.round(y / 18 - grabSlotOffset)));
+  return { day: Number(col.dataset.day), slot };
+}
+
+function highlightDropTarget(e) {
+  clearDropHighlight();
+  const offset = dragCtx.type === "move" ? dragCtx.grabSlotOffset : 0;
+  const t = getDropTarget(e, offset);
+  if (!t) return;
+  const col = document.querySelector(`.day-col[data-day="${t.day}"]`);
+  if (!col) return;
+  const cells = col.querySelectorAll(".slot");
+  let durSlots = 1;
+  if (dragCtx.type === "create") durSlots = Math.max(1, Math.round((dragCtx.researcher.duration || 60) / currentSlotMin()));
+  else if (dragCtx.type === "move") durSlots = dragCtx.block.durationSlots;
+  const startIdx = Math.max(0, Math.min(cells.length - 1, t.slot));
+  for (let i = startIdx; i < Math.min(startIdx + durSlots, cells.length); i++) {
+    cells[i].classList.add("drop-target");
+  }
+}
+function clearDropHighlight() {
+  document.querySelectorAll(".slot.drop-target").forEach(el => el.classList.remove("drop-target"));
+}
+
+/* ===== Drag on empty calendar to create blank block ===== */
+function startCreateBlankBlock(e, day, col) {
+  e.preventDefault();
+  const rect = col.getBoundingClientRect();
+  const startSlot = Math.max(0, Math.min(totalSlots()-1, Math.floor((e.clientY - rect.top) / 18)));
+  const preview = document.createElement("div");
+  preview.className = "block-preview";
+  preview.style.top = (startSlot * 18) + "px";
+  preview.style.height = "17px";
+  col.appendChild(preview);
+  dragCtx = { type: "create-blank", day, startSlot, currentSlot: startSlot, col, rect, preview, moved: false, startY: e.clientY };
+  document.body.classList.add("cursor-grabbing");
+  document.addEventListener("mousemove", onCreateBlankMove);
+  document.addEventListener("mouseup", onCreateBlankEnd);
+}
+
+function onCreateBlankMove(e) {
+  if (!dragCtx || dragCtx.type !== "create-blank") return;
+  if (Math.abs(e.clientY - dragCtx.startY) > 2) dragCtx.moved = true;
+  const currentSlot = Math.max(0, Math.min(totalSlots()-1, Math.floor((e.clientY - dragCtx.rect.top) / 18)));
+  dragCtx.currentSlot = currentSlot;
+  const s = Math.min(dragCtx.startSlot, currentSlot);
+  const e2 = Math.max(dragCtx.startSlot, currentSlot);
+  const dur = e2 - s + 1;
+  dragCtx.preview.style.top = (s * 18) + "px";
+  dragCtx.preview.style.height = (dur * 18 - 1) + "px";
+}
+
+function onCreateBlankEnd() {
+  document.removeEventListener("mousemove", onCreateBlankMove);
+  document.removeEventListener("mouseup", onCreateBlankEnd);
+  document.body.classList.remove("cursor-grabbing");
+  if (!dragCtx || dragCtx.type !== "create-blank") return;
+  const ctx = dragCtx;
+  ctx.preview.remove();
+  dragCtx = null;
+  if (!ctx.moved) return;
+  const s = Math.min(ctx.startSlot, ctx.currentSlot);
+  const e2 = Math.max(ctx.startSlot, ctx.currentSlot);
+  const block = {
+    id: uid(),
+    researcherId: null,
+    day: ctx.day,
+    startSlot: s,
+    durationSlots: e2 - s + 1,
+    label: "",
+    notes: "",
+  };
+  currentBlocks().push(block);
+  ui.selectedBlockId = block.id;
+  saveData();
+  renderSchedule();
+  openBlockModal(block);
+}
+
+/* ===== Move / Resize existing blocks ===== */
+function startMoveBlock(e, block) {
+  e.preventDefault();
+  if (ui.selectedBlockId !== block.id) {
+    document.querySelectorAll("#schedule .block.selected").forEach(el => el.classList.remove("selected"));
+    e.currentTarget.classList.add("selected");
+    ui.selectedBlockId = block.id;
+  }
+  const blockRect = e.currentTarget.getBoundingClientRect();
+  const grabSlotOffset = (e.clientY - blockRect.top) / 18;
+  dragCtx = { type: "move", block, startX: e.clientX, startY: e.clientY, moved: false, grabSlotOffset, label: getResearcher(block.researcherId)?.short || getResearcher(block.researcherId)?.name || block.label };
+  document.body.classList.add("cursor-grabbing");
+  document.addEventListener("mousemove", onDragMove);
+  document.addEventListener("mouseup", onDragEnd);
+}
+
+function startResizeBlock(e, block, edge) {
+  e.preventDefault();
+  e.stopPropagation();
+  ui.selectedBlockId = block.id;
+  dragCtx = { type: "resize", edge, block, startY: e.clientY, origStart: block.startSlot, origDur: block.durationSlots };
+  document.body.classList.add("cursor-resize");
+  document.addEventListener("mousemove", onDragMove);
+  document.addEventListener("mouseup", onDragEnd);
+}
+
+function doResize(e) {
+  const b = dragCtx.block;
+  const dy = e.clientY - dragCtx.startY;
+  const deltaSlots = Math.round(dy / 18);
+  if (dragCtx.edge === "top") {
+    const endSlot = dragCtx.origStart + dragCtx.origDur;
+    const newStart = Math.max(0, Math.min(endSlot - 1, dragCtx.origStart + deltaSlots));
+    b.startSlot = newStart;
+    b.durationSlots = endSlot - newStart;
+  } else {
+    const max = totalSlots() - b.startSlot;
+    b.durationSlots = Math.max(1, Math.min(max, dragCtx.origDur + deltaSlots));
+  }
+  saveData();
+  renderSchedule();
+}
+
+/* ===== Block actions ===== */
+function deleteBlock(id) {
+  const arr = currentBlocks();
+  const i = arr.findIndex(b => b.id === id);
+  if (i >= 0) {
+    arr.splice(i, 1);
+    if (ui.selectedBlockId === id) ui.selectedBlockId = null;
+    saveData();
+    renderSchedule();
+  }
+}
+
+function openBlockModal(block) {
+  const r = getResearcher(block.researcherId);
+  const durOptions = [];
+  const sm = currentSlotMin();
+  for (let m = sm; m <= 240; m += sm) durOptions.push(`<option value="${m/sm}" ${block.durationSlots === m/sm ? "selected" : ""}>${m} min</option>`);
+  const pis = Array.from(new Set(data.researchers.map(x => x.pi || "").filter(Boolean))).sort();
+  const currentPI = r?.pi || "";
+  openModal(`
+    <h2>Edit block</h2>
+    <div class="row">
+      <div class="field"><label>PI</label><select id="f-pi">
+        <option value="">(any)</option>
+        ${pis.map(p => `<option value="${escapeHtml(p)}" ${p === currentPI ? "selected" : ""}>${escapeHtml(p)}</option>`).join("")}
+      </select></div>
+      <div class="field" style="flex:2"><label>Study</label><select id="f-researcher"></select></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Day</label><select id="f-day">${DAY_NAMES.map((d,i) => `<option value="${i}" ${i === block.day ? "selected" : ""}>${d}</option>`).join("")}</select></div>
+      <div class="field"><label>Start</label><select id="f-start">${startTimeOptions(block.startSlot)}</select></div>
+      <div class="field"><label>Duration</label><select id="f-dur">${durOptions.join("")}</select></div>
+    </div>
+    <div class="field"><label>Label override (optional)</label><input id="f-label" value="${escapeHtml(block.label || "")}" placeholder="${escapeHtml(r?.short || r?.name || "")}"></div>
+    <div class="field"><label>Notes</label><textarea id="f-notes" rows="3">${escapeHtml(block.notes || "")}</textarea></div>
+    <div class="modal-actions">
+      <button data-act="delete" class="danger">Delete</button>
+      <button data-act="duplicate">Duplicate</button>
+      <span style="flex:1"></span>
+      <button data-act="cancel">Cancel</button>
+      <button data-act="save" class="primary">Save</button>
+    </div>`, {
+      save: () => {
+        const rid = document.querySelector("#f-researcher").value;
+        block.researcherId = rid || null;
+        block.day = Number(document.querySelector("#f-day").value);
+        block.startSlot = Number(document.querySelector("#f-start").value);
+        block.durationSlots = Number(document.querySelector("#f-dur").value);
+        const max = totalSlots() - block.startSlot;
+        if (block.durationSlots > max) block.durationSlots = max;
+        block.label = document.querySelector("#f-label").value.trim();
+        block.notes = document.querySelector("#f-notes").value;
+        saveData(); renderSchedule(); renderPalette();
+      },
+      delete: () => deleteBlock(block.id),
+      duplicate: () => duplicateBlock(block),
+    });
+
+  const piSel = document.querySelector("#f-pi");
+  const rSel = document.querySelector("#f-researcher");
+  function populateStudies() {
+    const pi = piSel.value;
+    const studies = data.researchers.filter(x => !pi || (x.pi || "") === pi);
+    const opts = [`<option value="">(no study)</option>`];
+    for (const x of studies) {
+      opts.push(`<option value="${x.id}" ${x.id === block.researcherId ? "selected" : ""}>${escapeHtml(x.name)}${x.pi ? " — " + escapeHtml(x.pi) : ""}</option>`);
+    }
+    rSel.innerHTML = opts.join("");
+  }
+  piSel.addEventListener("change", populateStudies);
+  rSel.addEventListener("change", () => {
+    const chosen = getResearcher(rSel.value);
+    if (chosen && chosen.pi) piSel.value = chosen.pi;
+  });
+  populateStudies();
+}
+
+function duplicateBlock(block) {
+  const copy = { ...block, id: uid() };
+  const max = totalSlots();
+  const preferred = block.startSlot + block.durationSlots;
+  copy.startSlot = (preferred + block.durationSlots <= max) ? preferred : block.startSlot;
+  if (copy.startSlot + copy.durationSlots > max) copy.durationSlots = max - copy.startSlot;
+  currentBlocks().push(copy);
+  ui.selectedBlockId = copy.id;
+  saveData(); renderSchedule();
+}
+
+function startTimeOptions(selected) {
+  const opts = [];
+  for (let s = 0; s < totalSlots(); s++) {
+    opts.push(`<option value="${s}" ${s === selected ? "selected" : ""}>${minutesToLabel(slotToMinutes(s))}</option>`);
+  }
+  return opts.join("");
+}
+
+/* ===== Researcher CRUD ===== */
+function openResearcherModal(existing) {
+  const r = existing || { id: uid(), name: "", short: "", pi: "", duration: 60, color: PALETTE_COLORS[data.researchers.length % PALETTE_COLORS.length], notes: "" };
+  openModal(`
+    <h2>${existing ? "Edit" : "Add"} researcher</h2>
+    <div class="field"><label>Name / Study *</label><input id="f-name" value="${escapeHtml(r.name)}" required></div>
+    <div class="row">
+      <div class="field"><label>Short label (for blocks)</label><input id="f-short" value="${escapeHtml(r.short)}"></div>
+      <div class="field"><label>PI</label><input id="f-pi" value="${escapeHtml(r.pi)}"></div>
+    </div>
+    <div class="field"><label>Default duration (minutes)</label><input id="f-dur" type="number" step="5" min="5" value="${r.duration}"></div>
+    <div class="field"><label>Color</label><div class="color-picker" id="f-colors">${PALETTE_COLORS.map(c => `<div class="color-swatch${c === r.color ? " selected" : ""}" data-color="${c}" style="background:${c}"></div>`).join("")}</div></div>
+    <div class="field"><label>Notes</label><textarea id="f-notes" rows="2">${escapeHtml(r.notes || "")}</textarea></div>
+    <div class="modal-actions">
+      ${existing ? '<button data-act="delete" class="danger">Delete</button>' : ""}
+      <span style="flex:1"></span>
+      <button data-act="cancel">Cancel</button>
+      <button data-act="save" class="primary">Save</button>
+    </div>`, {
+      save: () => {
+        const name = document.querySelector("#f-name").value.trim();
+        if (!name) { alert("Name required."); return false; }
+        r.name = name;
+        r.short = document.querySelector("#f-short").value.trim();
+        r.pi = document.querySelector("#f-pi").value.trim();
+        r.duration = Math.max(5, Number(document.querySelector("#f-dur").value) || 60);
+        r.notes = document.querySelector("#f-notes").value;
+        const selSw = document.querySelector(".color-swatch.selected");
+        if (selSw) r.color = selSw.dataset.color;
+        if (!existing) data.researchers.push(r);
+        saveData(); renderPalette(); renderSchedule();
+      },
+      delete: () => deleteResearcher(r),
+    });
+  document.querySelectorAll("#f-colors .color-swatch").forEach(sw => {
+    sw.addEventListener("click", () => {
+      document.querySelectorAll("#f-colors .color-swatch").forEach(x => x.classList.remove("selected"));
+      sw.classList.add("selected");
+    });
+  });
+}
+
+function deleteResearcher(r) {
+  let inUse = 0;
+  for (const scan of Object.values(data.schedules))
+    for (const week of Object.values(scan))
+      for (const b of week) if (b.researcherId === r.id) inUse++;
+  const msg = inUse > 0
+    ? `Delete "${r.name}" and remove ${inUse} scheduled block(s)?`
+    : `Delete "${r.name}"?`;
+  if (!confirm(msg)) return;
+  data.researchers = data.researchers.filter(x => x.id !== r.id);
+  for (const scan of Object.values(data.schedules))
+    for (const w of Object.keys(scan))
+      scan[w] = scan[w].filter(b => b.researcherId !== r.id);
+  saveData(); closeModal(); render();
+}
+
+/* ===== Settings modal ===== */
+function openSettingsModal() {
+  const s = data.settings;
+  const slotOptionsFor = sel => SLOT_CHOICES.map(v => `<option value="${v}" ${v === sel ? "selected" : ""}>${v} min</option>`).join("");
+  const scannerRows = s.scannerNames.map((name, i) => `
+    <div class="row scanner-row">
+      <div class="field" style="flex:2"><label>Scanner ${i+1} name</label><input class="f-scan-name" value="${escapeHtml(name)}"></div>
+      <div class="field"><label>Slot</label><select class="f-scan-slot">${slotOptionsFor(slotMinFor(name))}</select></div>
+    </div>`).join("");
+  openModal(`
+    <h2>Settings</h2>
+    <div class="row">
+      <div class="field"><label>Day start (hour, 0–23)</label><input id="f-start" type="number" min="0" max="23" value="${s.dayStartHour}"></div>
+      <div class="field"><label>Day end (hour, 1–24)</label><input id="f-end" type="number" min="1" max="24" value="${s.dayEndHour}"></div>
+    </div>
+    <div class="field"><label>Cycle Week 1 start date (Monday)</label><input id="f-cycle" type="date" value="${s.cycleStartDate}"></div>
+    <div class="field"><label>Scanners</label>${scannerRows}
+      <div style="color:var(--muted); font-size:11px; margin-top:4px;">Changing a scanner's slot duration keeps existing blocks' clock times (rounded to the new grid).</div></div>
+    <div class="modal-actions">
+      <button data-act="cancel">Cancel</button>
+      <button data-act="save" class="primary">Save</button>
+    </div>`, {
+      save: () => {
+        const start = Number(document.querySelector("#f-start").value);
+        const end = Number(document.querySelector("#f-end").value);
+        if (!(end > start)) { alert("End hour must be greater than start hour."); return false; }
+        const nameEls = document.querySelectorAll(".f-scan-name");
+        const slotEls = document.querySelectorAll(".f-scan-slot");
+        const scanners = Array.from(nameEls).map(el => el.value.trim());
+        const slotMins = Array.from(slotEls).map(el => Number(el.value));
+        if (scanners.some(n => !n)) { alert("All 3 scanner names must be filled in."); return false; }
+        if (new Set(scanners).size !== scanners.length) { alert("Scanner names must be unique."); return false; }
+        const oldNames = s.scannerNames.slice();
+        s.dayStartHour = start;
+        s.dayEndHour = end;
+        s.cycleStartDate = document.querySelector("#f-cycle").value;
+        const newSchedules = {};
+        const newSlotMin = {};
+        scanners.forEach((name, i) => {
+          const oldName = oldNames[i];
+          const oldSlotMin = slotMinFor(oldName);
+          const newMin = slotMins[i];
+          const sched = data.schedules[oldName] || {1:[],2:[],3:[],4:[]};
+          if (newMin !== oldSlotMin) {
+            for (const w of [1,2,3,4]) {
+              sched[w] = sched[w].map(b => convertBlockSlotMin(b, oldSlotMin, newMin));
+            }
+          }
+          newSchedules[name] = sched;
+          newSlotMin[name] = newMin;
+        });
+        data.schedules = newSchedules;
+        s.scannerNames = scanners;
+        s.scannerSlotMin = newSlotMin;
+        if (!scanners.includes(ui.currentScanner)) ui.currentScanner = scanners[0];
+        saveData(); render();
+      },
+    });
+}
+
+function convertBlockSlotMin(b, oldMin, newMin) {
+  const startMin = b.startSlot * oldMin;
+  const durMin = b.durationSlots * oldMin;
+  return {
+    ...b,
+    startSlot: Math.round(startMin / newMin),
+    durationSlots: Math.max(1, Math.round(durMin / newMin)),
+  };
+}
+
+/* ===== Modal mechanics ===== */
+let modalCallbacks = null;
+function openModal(html, callbacks) {
+  modalCallbacks = callbacks || {};
+  const root = document.querySelector("#modal-root");
+  root.innerHTML = `<div class="modal-backdrop"><div class="modal">${html}</div></div>`;
+  root.querySelector(".modal-backdrop").addEventListener("click", e => {
+    if (e.target.classList.contains("modal-backdrop")) closeModal();
+  });
+  root.querySelectorAll("[data-act]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const act = btn.dataset.act;
+      if (act === "cancel") { closeModal(); return; }
+      const cb = modalCallbacks[act];
+      if (cb) {
+        const r = cb();
+        if (r === false) return; // validation failed; keep open
+        closeModal();
+      } else closeModal();
+    });
+  });
+}
+function closeModal() { document.querySelector("#modal-root").innerHTML = ""; modalCallbacks = null; }
+
+/* ===== Week actions ===== */
+function copyWeekPrompt() {
+  const current = ui.currentWeek;
+  const choices = [1,2,3,4].filter(w => w !== current);
+  openModal(`
+    <h2>Copy Week ${current}</h2>
+    <div class="field"><label>Copy to</label>
+      <select id="f-target">
+        <option value="all">All other weeks</option>
+        ${choices.map(w => `<option value="${w}">Week ${w}</option>`).join("")}
+      </select></div>
+    <div class="field"><label><input type="checkbox" id="f-overwrite" checked> Overwrite target (otherwise append)</label></div>
+    <div class="modal-actions">
+      <button data-act="cancel">Cancel</button>
+      <button data-act="save" class="primary">Copy</button>
+    </div>`, {
+      save: () => {
+        const target = document.querySelector("#f-target").value;
+        const overwrite = document.querySelector("#f-overwrite").checked;
+        const src = data.schedules[ui.currentScanner][current];
+        const targets = target === "all" ? choices : [Number(target)];
+        for (const w of targets) {
+          const clone = src.map(b => ({ ...b, id: uid() }));
+          if (overwrite) data.schedules[ui.currentScanner][w] = clone;
+          else data.schedules[ui.currentScanner][w] = data.schedules[ui.currentScanner][w].concat(clone);
+        }
+        saveData(); renderSchedule();
+      },
+    });
+}
+
+function clearWeek() {
+  if (!confirm(`Clear all blocks in ${ui.currentScanner} Week ${ui.currentWeek}?`)) return;
+  data.schedules[ui.currentScanner][ui.currentWeek] = [];
+  ui.selectedBlockId = null;
+  saveData(); renderSchedule();
+}
+
+/* ===== JSON import/export ===== */
+function saveJSON() {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `mri-schedule-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function loadJSON() { document.querySelector("#file-input").click(); }
+document.querySelector("#file-input").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      data = migrate(parsed);
+      ui.currentScanner = data.settings.scannerNames[0];
+      ui.currentWeek = 1;
+      ui.selectedBlockId = null;
+      saveData(); render();
+    } catch (err) { alert("Failed to load JSON: " + err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+});
+
+/* ===== ICS export (basic stub; format to be refined) ===== */
+function exportICS() {
+  const start = data.settings.cycleStartDate;
+  if (!start) { alert("Set Cycle Week 1 start date in Settings first."); return; }
+  const weeksInput = prompt("How many weeks of events to generate?", "26");
+  const numWeeks = Math.max(1, Math.min(260, Number(weeksInput) || 0));
+  if (!numWeeks) return;
+  const startDate = new Date(start + "T00:00:00");
+  if (isNaN(startDate)) { alert("Invalid cycle start date."); return; }
+
+  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//MRI Schedule Builder//EN","CALSCALE:GREGORIAN"];
+  const stamp = icsStamp(new Date());
+
+  for (const scanner of data.settings.scannerNames) {
+    const sm = slotMinFor(scanner);
+    for (let w = 0; w < numWeeks; w++) {
+      const weekNum = (w % 4) + 1;
+      const blocks = data.schedules[scanner][weekNum];
+      for (const b of blocks) {
+        const r = getResearcher(b.researcherId);
+        const label = b.label || r?.short || r?.name || "Block";
+        const dayDate = new Date(startDate);
+        dayDate.setDate(dayDate.getDate() + w * 7 + b.day);
+        const startMin = data.settings.dayStartHour * 60 + b.startSlot * sm;
+        const endMin = startMin + b.durationSlots * sm;
+        const dtStart = applyTime(dayDate, startMin);
+        const dtEnd = applyTime(dayDate, endMin);
+        lines.push("BEGIN:VEVENT");
+        lines.push(`UID:${b.id}-w${w}@mri-schedule`);
+        lines.push(`DTSTAMP:${stamp}`);
+        lines.push(`DTSTART:${icsStamp(dtStart)}`);
+        lines.push(`DTEND:${icsStamp(dtEnd)}`);
+        lines.push(`SUMMARY:${icsEscape(`[${scanner}] ${label}`)}`);
+        const descParts = [];
+        if (r?.name && r.name !== label) descParts.push(r.name);
+        if (r?.pi) descParts.push("PI: " + r.pi);
+        if (b.notes) descParts.push(b.notes);
+        if (descParts.length) lines.push(`DESCRIPTION:${icsEscape(descParts.join(" \\n "))}`);
+        lines.push("END:VEVENT");
+      }
+    }
+  }
+  lines.push("END:VCALENDAR");
+
+  const blob = new Blob([lines.join("\r\n")], { type: "text/calendar" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `mri-schedule-${new Date().toISOString().slice(0,10)}.ics`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function applyTime(date, mins) {
+  const d = new Date(date);
+  d.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
+  return d;
+}
+function icsStamp(d) {
+  const pad = n => String(n).padStart(2, "0");
+  return d.getUTCFullYear() + pad(d.getUTCMonth()+1) + pad(d.getUTCDate()) + "T" + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + pad(d.getUTCSeconds()) + "Z";
+}
+function icsEscape(s) { return String(s).replace(/\\/g,"\\\\").replace(/\n/g,"\\n").replace(/,/g,"\\,").replace(/;/g,"\\;"); }
+
+/* ===== Event wiring ===== */
+document.querySelector("#scanner-select").addEventListener("change", e => {
+  ui.currentScanner = e.target.value;
+  ui.selectedBlockId = null;
+  renderSchedule();
+});
+document.querySelectorAll("#tabs .tab").forEach(el => {
+  el.addEventListener("click", () => {
+    ui.currentWeek = Number(el.dataset.week);
+    ui.selectedBlockId = null;
+    renderTabs(); renderSchedule();
+  });
+});
+document.querySelector("#btn-add-researcher").addEventListener("click", () => openResearcherModal(null));
+document.querySelector("#btn-settings").addEventListener("click", openSettingsModal);
+document.querySelector("#btn-save-json").addEventListener("click", saveJSON);
+document.querySelector("#btn-load-json").addEventListener("click", loadJSON);
+document.querySelector("#btn-export-ics").addEventListener("click", exportICS);
+document.querySelector("#btn-copy-week").addEventListener("click", copyWeekPrompt);
+document.querySelector("#btn-clear-week").addEventListener("click", clearWeek);
+document.querySelector("#search-input").addEventListener("input", e => { ui.filter = e.target.value; renderPalette(); });
+
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input, textarea, select")) return;
+  if ((e.key === "Delete" || e.key === "Backspace") && ui.selectedBlockId) {
+    e.preventDefault();
+    deleteBlock(ui.selectedBlockId);
+  } else if (e.key === "Escape") {
+    if (document.querySelector(".modal-backdrop")) closeModal();
+    else { ui.selectedBlockId = null; renderSchedule(); }
+  }
+});
+
+// Click on schedule background deselects
+document.querySelector("#schedule-wrap").addEventListener("click", e => {
+  if (!e.target.closest(".block")) {
+    ui.selectedBlockId = null;
+    renderSchedule();
+  }
+});
+
+/* ===== Boot ===== */
+render();
+</script>
+</body>
+</html>

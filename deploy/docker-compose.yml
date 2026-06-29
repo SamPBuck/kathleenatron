@@ -1,0 +1,15 @@
+services:
+  mcl-template-builder:
+    build: .
+    image: mcl-template-builder:latest
+    container_name: mcl-template-builder
+    ports:
+      - "8000:8000"
+    volumes:
+      # Named volume → schedule survives container rebuilds/upgrades.
+      # Swap for a host path (e.g. ./data:/data) if you'd rather see the .db file.
+      - mcl-data:/data
+    restart: unless-stopped
+
+volumes:
+  mcl-data:

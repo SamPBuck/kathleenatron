@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+data/
+*.db
+.DS_Store
+README.md
